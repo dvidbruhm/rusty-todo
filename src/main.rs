@@ -1,6 +1,7 @@
 #[warn(clippy::needless_pass_by_value)]
 use dirs::config_dir;
 use std::path::Path;
+use utils::check_priority;
 
 use clap::{Parser, Subcommand};
 
@@ -31,8 +32,8 @@ enum Commands {
         /// Text of todo item to add
         text: String,
         /// Priority of the item to add (from 1 to 5)
-        #[clap(default_value_t = 3, value_parser = clap::value_parser!(i32).range(1..=5))]
-        priority: i32,
+        #[clap(value_parser)]
+        priority: Option<i32>,
     },
     /// Insert item to todo list at position number
     #[clap(visible_alias = "in")]
@@ -41,9 +42,9 @@ enum Commands {
         num: i32,
         /// Text of todo item to insert
         text: String,
-        /// Priority of the item to add (from 1 to 5)
-        #[clap(default_value_t = 3, value_parser = clap::value_parser!(i32).range(1..=5))]
-        priority: i32,
+        /// Priority of the item to insert (from 1 to 5)
+        #[clap(value_parser)]
+        priority: Option<i32>,
     },
     /// Delete item from todo list by number
     #[clap(visible_aliases = &["rm", "del"])]
@@ -77,6 +78,14 @@ enum Commands {
         /// Position of todo item to undo
         num: i32,
     },
+    /// Changes the priority of an item
+    #[clap(visible_alias = "p")]
+    Priority {
+        /// Position of item to change priority
+        num: i32,
+        /// New priority (from 1 to 5)
+        priority: Option<i32>,
+    },
 }
 
 fn main() {
@@ -107,7 +116,11 @@ fn main() {
             commands::list_done(done_path.as_path());
         }
         Some(Commands::Add { text, priority }) => {
-            commands::add_item(todo_path.as_path(), text, priority);
+            let p = &check_priority(priority, 1, 5, 3);
+            if p.is_none() {
+                return;
+            }
+            commands::add_item(todo_path.as_path(), text, p);
             commands::list_todo(todo_path.as_path());
         }
         Some(Commands::Insert {
@@ -115,7 +128,11 @@ fn main() {
             text,
             priority,
         }) => {
-            if commands::insert_item(todo_path.as_path(), text, num, priority) {
+            let p = &check_priority(priority, 1, 5, 3);
+            if p.is_none() {
+                return;
+            }
+            if commands::insert_item(todo_path.as_path(), text, num, p) {
                 commands::list_todo(todo_path.as_path());
             }
         }
@@ -144,6 +161,14 @@ fn main() {
             if commands::undone_item(todo_path.as_path(), done_path.as_path(), num) {
                 commands::list_todo(todo_path.as_path());
             }
+        }
+        Some(Commands::Priority { num, priority }) => {
+            let p = &check_priority(priority, 1, 5, 3);
+            if p.is_none() {
+                return;
+            }
+            commands::change_priority(todo_path.as_path(), num, p);
+            commands::list_todo(todo_path.as_path());
         }
         None => {}
     }

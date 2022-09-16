@@ -34,14 +34,16 @@ pub fn list_todo(path: &Path) {
     println!("{}", "Todo list : ".blue().bold());
     println!("{}", "-----------".blue().dimmed());
 
+    let indent = ((num_lines as f32) / 10.0) as usize + 1;
     for line in lines_struct.iter() {
         let p = &line.text[..4];
         let t = &line.text[4..];
         println!(
-            "[{}] -> {} {}",
+            "[{:>indent$}] -> {}{}",
             line.num.to_string().magenta().bold(),
             priority_to_colored_str(p).bold(),
-            t.blue()
+            t.blue(),
+            indent = indent
         );
     }
 }
@@ -57,31 +59,29 @@ pub fn list_done(path: &Path) {
 
     println!("{}", "Done list : ".green().bold());
     println!("{}", "-----------".green().dimmed());
+    let indent = ((num_lines as f32) / 10.0) as usize + 1;
     for (i, line) in lines.iter().enumerate() {
         println!(
-            "[{}] -> {}",
+            "[{:>indent$}] -> {}",
             (i + 1).to_string().magenta().bold(),
-            line.green()
+            line.green(),
+            indent = indent
         );
     }
 }
 
-pub fn add_item(path: &Path, text: &str, priority: &i32) {
+pub fn add_item(path: &Path, text: &str, priority: &Option<i32>) {
     let mut file = OpenOptions::new()
         .write(true)
         .append(true)
         .open(path)
         .expect("Unable to open file");
 
-    if priority == &-1 {
-        writeln!(file, "{}", text).expect("Unable to write to file");
-    } else {
-        let priority_str = priority_to_str(priority);
-        writeln!(file, "{} {}", priority_str, text).expect("Unable to write to file");
-    }
+    let priority_str = priority_to_str(priority);
+    writeln!(file, "{}{}", priority_str, text).expect("Unable to write to file");
 }
 
-pub fn insert_item(path: &Path, text: &str, item_num: &i32, priority: &i32) -> bool {
+pub fn insert_item(path: &Path, text: &str, item_num: &i32, priority: &Option<i32>) -> bool {
     let mut lines = read_file_as_lines(path);
 
     let num_lines = lines.len() as i32;
@@ -93,7 +93,7 @@ pub fn insert_item(path: &Path, text: &str, item_num: &i32, priority: &i32) -> b
 
     lines.insert(
         *item_num as usize - 1,
-        format!("{} {}", priority_to_str(priority), text).to_string(),
+        format!("{}{}", priority_to_str(priority), text).to_string(),
     );
     write_lines_to_file(path, lines);
     true
@@ -123,7 +123,7 @@ pub fn replace_item(path: &Path, item_num: &i32, text: &str) -> bool {
     if !removed {
         return false;
     }
-    insert_item(path, text, item_num, &3);
+    insert_item(path, text, item_num, &Some(3));
     true
 }
 
@@ -145,7 +145,7 @@ pub fn done_item(todo_path: &Path, done_path: &Path, item_num: &i32) -> bool {
         current_time.day()
     );
     time.push_str(done_line);
-    add_item(done_path, &time, &-1);
+    add_item(done_path, &time, &None);
     remove_item(todo_path, item_num);
     true
 }
@@ -160,9 +160,17 @@ pub fn undone_item(todo_path: &Path, done_path: &Path, item_num: &i32) -> bool {
     }
 
     let undone_line = &lines[*item_num as usize - 1][15..];
-    add_item(todo_path, undone_line, &-1);
+    add_item(todo_path, undone_line, &None);
     remove_item(done_path, item_num);
     true
+}
+
+pub fn change_priority(todo_path: &Path, item_num: &i32, priority: &Option<i32>) {
+    let mut lines = read_file_as_lines(todo_path);
+    let mut line = lines[*item_num as usize - 1].to_owned();
+    line.replace_range(0..5, priority_to_str(priority));
+    lines[*item_num as usize - 1] = line;
+    write_lines_to_file(todo_path, lines);
 }
 
 fn check_item_num(num_lines: &i32, item_num: &i32) -> bool {
@@ -196,18 +204,21 @@ fn write_lines_to_file(path: &Path, lines: Vec<String>) {
     }
 }
 
-fn priority_to_str(priority: &i32) -> &str {
+fn priority_to_str(priority: &Option<i32>) -> &str {
     match priority {
-        1 => return "(!!)",
-        2 => return " (!)",
-        3 => return "    ",
-        4 => return " (-)",
-        5 => return "(--)",
-        _ => panic!(
-            "Priority should be between {} and {}",
-            "1".yellow(),
-            "5".yellow()
-        ),
+        Some(p) => match p {
+            1 => "(!!) ",
+            2 => " (!) ",
+            3 => "     ",
+            4 => " (-) ",
+            5 => "(--) ",
+            _ => panic!(
+                "Priority should be between {} and {}",
+                "1".yellow(),
+                "5".yellow()
+            ),
+        },
+        None => "",
     }
 }
 
@@ -226,14 +237,14 @@ fn priority_to_colored_str(priority: &str) -> ColoredString {
     }
 }
 
-fn line_to_priority(line: &str) -> i32 {
+fn line_to_priority(line: &str) -> Option<i32> {
     let s = &line[..4];
     match s {
-        "(!!)" => return 1,
-        " (!)" => return 2,
-        "    " => return 3,
-        " (-)" => return 4,
-        "(--)" => return 5,
-        _ => panic!("Bad priority string."),
+        "(!!)" => Some(1),
+        " (!)" => Some(2),
+        "    " => Some(3),
+        " (-)" => Some(4),
+        "(--)" => Some(5),
+        _ => return None,
     }
 }
