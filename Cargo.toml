@@ -2,10 +2,14 @@
 name = "rusty-todo"
 version = "0.1.0"
 edition = "2021"
-description = "Rusty-todo is a simple colorful CLI todo list manager"
+description = "A simple and colorful CLI todo list manager"
 authors = ["dvidbruhm"]
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+license = "MIT OR Apache-2.0"
+readme = "README.md"
+homepage = "https://github.com/dvidbruhm/rusty-todo"
+repository = "https://github.com/dvidbruhm/rusty-todo"
+keywords = ["cli", "todo", "list", "task"]
+categories = ["command-line-utilities"]
 
 [dependencies]
 chrono = "0.4.22"
