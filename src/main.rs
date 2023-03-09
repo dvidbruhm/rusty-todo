@@ -1,6 +1,6 @@
 #[warn(clippy::needless_pass_by_value)]
 use dirs::config_dir;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use utils::check_priority;
 
 use clap::{Parser, Subcommand};
@@ -11,6 +11,10 @@ mod utils;
 #[derive(Parser)]
 #[clap(version, about, author, arg_required_else_help(true))]
 struct TodoCli {
+    /// Sets a directory path for the todo files
+    #[clap(short, long, value_parser, value_name = "FILE")]
+    todo_dir: Option<PathBuf>,
+
     #[clap(subcommand)]
     command: Option<Commands>,
 }
@@ -90,15 +94,21 @@ enum Commands {
 
 fn main() {
     let todo_cli = TodoCli::parse();
-    let todo_path = config_dir()
+
+    let mut todo_path = config_dir()
         .unwrap()
         .join(Path::new("rusty-todo"))
         .join(Path::new("todo.txt"));
 
-    let done_path = config_dir()
+    let mut done_path = config_dir()
         .unwrap()
         .join(Path::new("rusty-todo"))
         .join(Path::new("done.txt"));
+
+    if let Some(tp) = todo_cli.todo_dir.as_deref() {
+        todo_path = tp.to_path_buf().join(Path::new("todo.txt"));
+        done_path = tp.to_path_buf().join(Path::new("done.txt"));
+    }
 
     utils::create_dirs_from_file(todo_path.as_path());
     utils::create_dirs_from_file(done_path.as_path());
