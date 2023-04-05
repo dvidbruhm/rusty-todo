@@ -111,6 +111,13 @@ Add a new task at a specific number (instead of adding to the end of the list):
 rusty-todo insert 2 "Inserting at the second position in the list"
 ```
 
+## Configuration
+
+By default, the text files storing the todo and done list is in the config folder (```~/.config/rusty-todo```). To speficify a custom folder, use the ```-t, --todo-dir``` argument, for example:
+
+```
+rusty-todo --todo-dir /home/username/custom/path ls
+```
 
 ## Installation
 
