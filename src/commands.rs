@@ -39,10 +39,10 @@ pub fn list_todo(path: &Path) {
         let p = &line.text[..4];
         let t = &line.text[4..];
         println!(
-            "[{:>indent$}] -> {}{}",
+            "{}[{:>indent$}] ->{}",
+            priority_to_colored_str(p, p).bold(),
             line.num.to_string().magenta().bold(),
-            priority_to_colored_str(p).bold(),
-            t.blue(),
+            priority_to_colored_str(p, t),
             indent = indent
         );
     }
@@ -137,7 +137,7 @@ pub fn done_item(todo_path: &Path, done_path: &Path, item_num: &i32) -> bool {
     }
 
     let done_line = &lines[*item_num as usize - 1];
-    let current_time = chrono::offset::Local::now().date();
+    let current_time = chrono::offset::Local::now().date_naive();
     let mut time = format!(
         "[{:0>4}-{:0>2}-{:0>2}] - ",
         current_time.year(),
@@ -222,13 +222,13 @@ fn priority_to_str(priority: &Option<i32>) -> &str {
     }
 }
 
-fn priority_to_colored_str(priority: &str) -> ColoredString {
+fn priority_to_colored_str(priority: &str, text: &str) -> ColoredString {
     match priority {
-        "(!!)" => return "(!!)".yellow(),
-        " (!)" => return " (!)".red(),
-        "    " => return "    ".white(),
-        " (-)" => return " (-)".cyan(),
-        "(--)" => return "(--)".blue(),
+        "(!!)" => return text.yellow(),
+        " (!)" => return text.red(),
+        "    " => return text.white(),
+        " (-)" => return text.cyan(),
+        "(--)" => return text.blue(),
         _ => panic!(
             "Priority should be between {} and {}",
             "1".yellow(),
